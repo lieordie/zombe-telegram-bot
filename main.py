@@ -1,48 +1,36 @@
 import asyncio
 import logging
-from aiogram import Bot, Dispatcher, F, Router
+import os
+from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import CommandStart, Command
 from aiogram.enums import ParseMode
 
-logging.basicConfig(level=logging.INFO)
+# Настройка логирования
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = '8196826964:AAEvCpkPFrwwoFoeNrvjOdND25s7lVJJ1Js'
-CHANNEL_USERNAME = "@ZOBME_team"
-CHANNEL_INVITE_LINK = "https://t.me/ZOMBE_Team"
 
+BOT_TOKEN = '8245543069:AAFQMMk6KM-H6lYHG7M94iLzPAWXNuIIuqk'
+CHANNEL_LINK = "https://t.me/ZOMBE_Team"
+
+
+# Инициализация бота
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-router = Router()
 
-# Основная клавиатура с командами
-main_keyboard = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🎮 Состав команды", callback_data="team"),
-            InlineKeyboardButton(text="🏆 TI 2026", callback_data="ti_info")
-        ],
-        [
-            InlineKeyboardButton(text="📹 Наш контент", callback_data="content"),
-            InlineKeyboardButton(text="📊 Статистика", callback_data="stats")
-        ],
-        [
-            InlineKeyboardButton(text="🎥 YouTube", url="https://youtube.com/@ZOBME"),
-            InlineKeyboardButton(text="🔴 Twitch", url="https://twitch.tv/ZOBME")
-        ],
-        [
-            InlineKeyboardButton(text="⚡️ TikTok", url="https://tiktok.com/@ZOBME"),
-            InlineKeyboardButton(text="📢 Наш канал", url=CHANNEL_INVITE_LINK)
-        ]
-    ]
-)
+# ========== КОНФИГУРАЦИЯ ========== #
+LINKS = {
+    'youtube': "https://youtube.com/@ZOMBE",
+    'twitch': "https://twitch.tv/ZOMBE", 
+    'tiktok': "https://tiktok.com/@ZOMBE",
+    'channel': CHANNEL_LINK
+}
 
-async def send_welcome_message(chat_id: int, user_name: str):
-    """Отправляет приветственное сообщение"""
-    
-    welcome_text = f"""
-🎮 <b>ПРИВЕТ, {user_name}! ДОБРО ПОЖАЛОВАТЬ В ZOMBE TEAM! 🔥</b>
+# Словарь текстов для удобства управления и избежания дублирования
+TEXTS = {
+    'welcome': """
+🎮 <b>ПРИВЕТ, {name}! ДОБРО ПОЖАЛОВАТЬ В ZOMBE TEAM! 🔥</b>
 
 Мы - легендарная команда, которая 8 лет подряд не проходит на TI, 
 но от этого стала только сильнее духом! 💪
@@ -53,58 +41,13 @@ async def send_welcome_message(chat_id: int, user_name: str):
 • 🏆 <b>TI 2026</b> - наш великий путь
 • 📹 <b>Наш контент</b> - видео и стримы
 • 📊 <b>Статистика</b> - наши "успехи"
+• 📖 <b>Наша история</b> - как мы начинали
 
 <b>Или переходи напрямую на наши платформы!</b>
 
 <i>P.S. Дiма до сих пор не уверен на какой позиции играет...</i> 😂
-    """
-    
-    await bot.send_message(
-        chat_id=chat_id,
-        text=welcome_text,
-        reply_markup=main_keyboard,
-        parse_mode=ParseMode.HTML
-    )
-
-# ========== КОМАНДЫ ========== #
-
-@dp.message(CommandStart())
-async def start_command(message: Message):
-    """Команда /start"""
-    user = message.from_user
-    logger.info(f"🎯 Новый пользователь: {user.full_name}")
-    await send_welcome_message(message.chat.id, user.first_name)
-
-@dp.message(Command("help"))
-async def help_command(message: Message):
-    """Команда /help - список всех команд"""
-    
-    help_text = """
-🛠 <b>ДОСТУПНЫЕ КОМАНДЫ ZOMBE TEAM:</b>
-
-<b>Основные команды:</b>
-/start - Главное меню
-/help - Эта справка
-/team - Состав нашей легендарной команды
-/ti - Наш путь к The International 2026
-/content - Наш контент на всех платформах
-/stats - Наша "впечатляющая" статистика
-
-<b>Быстрые команды:</b>
-/streams - Ближайшие стримы
-/matches - Последние матчи
-/goals - Наши цели на сезон
-
-<b>Используй кнопки в меню для быстрого доступа!</b> 🎯
-    """
-    
-    await message.answer(help_text, parse_mode=ParseMode.HTML)
-
-@dp.message(Command("team"))
-async def team_command(message: Message):
-    """Команда /team - состав команды"""
-    
-    team_text = """
+    """,
+    'team': """
 🎮 <b>ZOMBE TEAM - СОСТАВ ЛЕГЕНД</b>
 
 <b>Наши звезды, которые почти прошли на TI:</b>
@@ -119,7 +62,7 @@ async def team_command(message: Message):
 
 • 💎 <b>DOMINIC (5 позиция)</b>
   Бывший про-игрок Aurora Gaming!
-  <i>"Из про-сцены в легенды ZOBME!"</i>
+  <i>"Из про-сцены в легенды ZOMBE!"</i>
 
 • 🌟 <b>Величайший Максос (3 позиция)</b>
   Гордость Великих Лук, мета-брейкер!
@@ -131,27 +74,40 @@ async def team_command(message: Message):
 
 <b>Наша философия:</b>
 "Мы не проигрываем - мы собираем опыт для TI 2026!" 🏆
-    """
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🏆 Узнать про TI", callback_data="ti_info"),
-                InlineKeyboardButton(text="📹 Наш контент", callback_data="content")
-            ],
-            [
-                InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")
-            ]
-        ]
-    )
-    
-    await message.answer(team_text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
+    """,
+    'bio': """
+📖 <b>ИСТОРИЯ ZOMBE TEAM - ОТ НУЛЯ ДО ЛЕГЕНДЫ! 🚀</b>
 
-@dp.message(Command("ti"))
-async def ti_command(message: Message):
-    """Команда /ti - история TI"""
-    
-    ti_text = """
+<b>📅 2017 - Начало пути:</b>
+Всё началось в интернет-кафе "Квант" в Великих Луках, где Величайший Максос играл на стареньком компьютере. К нему подсел парень с ником "Хохлорез" и сказал: "Бро, давай соберем команду!"
+
+<b>🔥 2018 - Первый состав:</b>
+Мы собрали первых 5 человек:
+- Максос (оффлейн из В.Лук)
+- Миша (керри с амбициями)  
+- Стiс (роумер с улиц Киева)
+- Дiма (загадочный тип из Москвы)
+- DOMINIC (бывший про-игрок в поисках себя)
+
+<b>💀 2019-2021 - Эра поражений:</b>
+• 2019: Проиграли 50 матчей подряд
+• 2020: Научились говорить "гг вп" не расстраиваясь
+• 2021: Дiма впервые купил БКБ (и сразу умер)
+
+<b>🌟 2022 - Переломный момент:</b>
+DOMINIC, уставший от про-сцены, присоединился к нам на постоянной основе. С его приходом мы наконец-то выиграли 3 игры подряд!
+
+<b>🎯 2023-2025 - Путь к славе:</b>
+Создали YouTube канал, начали стримить на Twitch, завоевали 47 подписчиков в TikTok! Наши фейлы стали мемами, а неудачи - нашей фишкой!
+
+<b>🚀 2026 - НАШ ГОД!</b>
+8 лет упорных тренировок, тысячи проигранных матчей и несломленный дух привели нас к TI 2026!
+
+<b>Наша миссия:</b> Доказать, что главное - не победа, а то, как ты проигрываешь! 😎
+
+<i>"Мы не идеальны, но мы - ZOMBE!"</i> 💪
+    """,
+    'ti': """
 🏆 <b>ИСТОРИЯ НАШИХ ВЕЛИКИХ БИТВ ЗА TI</b>
 
 📅 <b>Наш путь к славе (пока не очень успешный):</b>
@@ -174,27 +130,8 @@ async def ti_command(message: Message):
 ✅ Дiма определился с позицией (наверное)
 
 <i>Стiс обещал перестать роумить на 1 уровне, если пройдем</i> 😂
-    """
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🎮 Состав команды", callback_data="team"),
-                InlineKeyboardButton(text="📊 Статистика", callback_data="stats")
-            ],
-            [
-                InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")
-            ]
-        ]
-    )
-    
-    await message.answer(ti_text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
-
-@dp.message(Command("content"))
-async def content_command(message: Message):
-    """Команда /content - наш контент"""
-    
-    content_text = """
+    """,
+    'content': """
 🎬 <b>КОНТЕНТ ZOMBE TEAM - СМЕХ И АДРЕНАЛИН! 🚀</b>
 
 <b>📹 YouTube:</b>
@@ -218,31 +155,8 @@ async def content_command(message: Message):
 • Интервью с DOMINIC про Aurora Gaming
 
 <b>Подписывайся на все платформы! Будет жарко! 🔥</b>
-    """
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🎥 YouTube", url="https://youtube.com/@ZOBME"),
-                InlineKeyboardButton(text="🔴 Twitch", url="https://twitch.tv/ZOBME")
-            ],
-            [
-                InlineKeyboardButton(text="⚡️ TikTok", url="https://tiktok.com/@ZOBME"),
-                InlineKeyboardButton(text="📢 Канал", url=CHANNEL_INVITE_LINK)
-            ],
-            [
-                InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")
-            ]
-        ]
-    )
-    
-    await message.answer(content_text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
-
-@dp.message(Command("stats"))
-async def stats_command(message: Message):
-    """Команда /stats - наша статистика"""
-    
-    stats_text = """
+    """,
+    'stats': """
 📊 <b>СТАТИСТИКА ZOMBE TEAM - ЦИФРЫ НЕ ВРУТ! 📈</b>
 
 <b>Общая статистика:</b>
@@ -266,27 +180,8 @@ async def stats_command(message: Message):
 
 <b>Цель на сезон:</b>
 Повысить винрейт до 50%! 🎯
-    """
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🎮 Состав", callback_data="team"),
-                InlineKeyboardButton(text="🏆 TI 2026", callback_data="ti_info")
-            ],
-            [
-                InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")
-            ]
-        ]
-    )
-    
-    await message.answer(stats_text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
-
-@dp.message(Command("streams"))
-async def streams_command(message: Message):
-    """Команда /streams - ближайшие стримы"""
-    
-    streams_text = """
+    """,
+    'streams': """
 🔴 <b>БЛИЖАЙШИЕ СТРИМЫ ZOMBE TEAM</b>
 
 <b>Расписание на неделю:</b>
@@ -308,147 +203,172 @@ async def streams_command(message: Message):
 🌟 Пятница - Величайший Максос ломает мету
 
 <b>Не пропусти! Будет эпично! 🚀</b>
+    """,
+    'help': """
+🛠 <b>ДОСТУПНЫЕ КОМАНДЫ ZOMBE TEAM:</b>
+
+<b>Основные команды:</b>
+/start - Главное меню
+/help - Эта справка
+/team - Состав нашей легендарной команды
+/ti - Наш путь к The International 2026
+/content - Наш контент на всех платформах
+/stats - Наша "впечатляющая" статистика
+/bio - Наша история
+
+<b>Быстрые команды:</b>
+/streams - Ближайшие стримы
+
+<b>Используй кнопки в меню для быстрого доступа!</b> 🎯
     """
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🔴 Twitch", url="https://twitch.tv/ZOBME"),
-                InlineKeyboardButton(text="📹 YouTube", url="https://youtube.com/@ZOBME")
-            ],
-            [
-                InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")
-            ]
-        ]
-    )
-    
-    await message.answer(streams_text, reply_markup=keyboard, parse_mode=ParseMode.HTML)
+}
+
+# Функция для создания клавиатур (для переиспользования и эффективности)
+def create_main_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎮 Состав команды", callback_data="team"),
+         InlineKeyboardButton(text="🏆 TI 2026", callback_data="ti_info")],
+        [InlineKeyboardButton(text="📹 Наш контент", callback_data="content"),
+         InlineKeyboardButton(text="📊 Статистика", callback_data="stats")],
+        [InlineKeyboardButton(text="📖 Наша история", callback_data="bio")],
+        [InlineKeyboardButton(text="🎥 YouTube", url=LINKS['youtube']),
+         InlineKeyboardButton(text="🔴 Twitch", url=LINKS['twitch'])],
+        [InlineKeyboardButton(text="⚡️ TikTok", url=LINKS['tiktok']),
+         InlineKeyboardButton(text="📢 Наш канал", url=LINKS['channel'])]
+    ])
+
+def create_back_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")]
+    ])
+
+def create_content_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎥 YouTube", url=LINKS['youtube']),
+         InlineKeyboardButton(text="🔴 Twitch", url=LINKS['twitch'])],
+        [InlineKeyboardButton(text="⚡️ TikTok", url=LINKS['tiktok'])],
+        [InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")]
+    ])
+
+def create_streams_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔴 Twitch", url=LINKS['twitch']),
+         InlineKeyboardButton(text="🎥 YouTube", url=LINKS['youtube'])],
+        [InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")]
+    ])
+
+# Универсальная функция для отправки/редактирования сообщений (снижает дублирование кода)
+async def send_or_edit_text(obj, text_key: str, reply_markup=None, user_name: str = None, parse_mode=ParseMode.HTML):
+    text = TEXTS[text_key]
+    if user_name and "{name}" in text:
+        text = text.format(name=user_name)
+    if isinstance(obj, Message):
+        await obj.answer(text, reply_markup=reply_markup, parse_mode=parse_mode)
+    elif isinstance(obj, CallbackQuery):
+        await obj.message.edit_text(text, reply_markup=reply_markup, parse_mode=parse_mode)
+        await obj.answer()
+    else:
+        logger.error("Неизвестный тип объекта для отправки текста")
+
+# ========== ОБРАБОТЧИКИ КОМАНД ========== #
+@dp.message(CommandStart())
+async def start_command(message: Message):
+    """Команда /start"""
+    user = message.from_user
+    logger.info(f"🎯 Новый пользователь: {user.full_name}")
+    await send_or_edit_text(message, 'welcome', create_main_keyboard(), user.first_name)
+
+@dp.message(Command("help"))
+async def help_command(message: Message):
+    """Команда /help"""
+    await send_or_edit_text(message, 'help')
+
+@dp.message(Command("team"))
+async def team_command(message: Message):
+    """Команда /team"""
+    await send_or_edit_text(message, 'team', create_back_keyboard())
+
+@dp.message(Command("ti"))
+async def ti_command(message: Message):
+    """Команда /ti"""
+    await send_or_edit_text(message, 'ti', create_back_keyboard())
+
+@dp.message(Command("content"))
+async def content_command(message: Message):
+    """Команда /content"""
+    await send_or_edit_text(message, 'content', create_content_keyboard())
+
+@dp.message(Command("stats"))
+async def stats_command(message: Message):
+    """Команда /stats"""
+    await send_or_edit_text(message, 'stats', create_back_keyboard())
+
+@dp.message(Command("streams"))
+async def streams_command(message: Message):
+    """Команда /streams"""
+    await send_or_edit_text(message, 'streams', create_streams_keyboard())
+
+@dp.message(Command("bio"))
+async def bio_command(message: Message):
+    """Команда /bio"""
+    await send_or_edit_text(message, 'bio', create_back_keyboard())
+
+# Обработчик неизвестных сообщений (для лучшего UX)
+@dp.message()
+async def unknown_message(message: Message):
+    """Обработчик неизвестных команд/сообщений"""
+    await message.answer("❓ Неизвестная команда. Используйте /help для списка доступных команд.", parse_mode=ParseMode.HTML)
 
 # ========== ОБРАБОТЧИКИ КНОПОК ========== #
-
 @dp.callback_query(F.data == "main_menu")
 async def main_menu_handler(callback: CallbackQuery):
     """Обработчик кнопки 'Главное меню'"""
-    await callback.message.edit_text(
-        text="🎮 <b>ГЛАВНОЕ МЕНЮ ZOBME TEAM</b>\n\nВыбери что тебя интересует:",
-        reply_markup=main_keyboard,
-        parse_mode=ParseMode.HTML
-    )
-    await callback.answer()
+    await send_or_edit_text(callback, 'welcome', create_main_keyboard(), callback.from_user.first_name)
 
 @dp.callback_query(F.data == "team")
 async def team_handler(callback: CallbackQuery):
     """Обработчик кнопки 'Состав команды'"""
-    team_text = """
-🎮 <b>ZOMBE TEAM - СОСТАВ ЛЕГЕНД</b>
-
-• 🔥 <b>Миша Хохлорез</b> - 2 позиция
-• 🎯 <b>Стiс</b> - 4 позиция  
-• 💎 <b>DOMINIC</b> - 5 позиция (экс Aurora)
-• 🌟 <b>Величайший Максос</b> - 3 позиция
-• ❓ <b>Дiма</b> - 1 позиция (но это не точно)
-
-Используй команду /team для полной информации!
-    """
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🏆 TI 2026", callback_data="ti_info"),
-                InlineKeyboardButton(text="📹 Контент", callback_data="content")
-            ],
-            [
-                InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")
-            ]
-        ]
-    )
-    
-    await callback.message.edit_text(
-        text=team_text,
-        reply_markup=keyboard,
-        parse_mode=ParseMode.HTML
-    )
-    await callback.answer()
+    await send_or_edit_text(callback, 'team', create_back_keyboard())
 
 @dp.callback_query(F.data == "ti_info")
 async def ti_handler(callback: CallbackQuery):
     """Обработчик кнопки 'TI 2026'"""
-    ti_text = "🏆 <b>TI 2026 - НАША ЦЕЛЬ!</b>\n\nИспользуй команду /ti чтобы узнать всю историю наших попыток!"
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🎮 Состав", callback_data="team"),
-                InlineKeyboardButton(text="📊 Статистика", callback_data="stats")
-            ],
-            [
-                InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")
-            ]
-        ]
-    )
-    
-    await callback.message.edit_text(
-        text=ti_text,
-        reply_markup=keyboard,
-        parse_mode=ParseMode.HTML
-    )
-    await callback.answer()
+    await send_or_edit_text(callback, 'ti', create_back_keyboard())
 
 @dp.callback_query(F.data == "content")
 async def content_handler(callback: CallbackQuery):
     """Обработчик кнопки 'Наш контент'"""
-    content_text = "📹 <b>НАШ КОНТЕНТ</b>\n\nИспользуй команду /content чтобы увидеть все наши платформы и расписание!"
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🎥 YouTube", url="https://youtube.com/@ZOBME"),
-                InlineKeyboardButton(text="🔴 Twitch", url="https://twitch.tv/ZOBME")
-            ],
-            [
-                InlineKeyboardButton(text="⚡️ TikTok", url="https://tiktok.com/@ZOBME")
-            ],
-            [
-                InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")
-            ]
-        ]
-    )
-    
-    await callback.message.edit_text(
-        text=content_text,
-        reply_markup=keyboard,
-        parse_mode=ParseMode.HTML
-    )
-    await callback.answer()
+    await send_or_edit_text(callback, 'content', create_content_keyboard())
 
 @dp.callback_query(F.data == "stats")
 async def stats_handler(callback: CallbackQuery):
     """Обработчик кнопки 'Статистика'"""
-    stats_text = "📊 <b>СТАТИСТИКА</b>\n\nИспользуй команду /stats чтобы увидеть наши впечатляющие цифры!"
-    
-    keyboard = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="🎮 Состав", callback_data="team"),
-                InlineKeyboardButton(text="🏆 TI 2026", callback_data="ti_info")
-            ],
-            [
-                InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")
-            ]
-        ]
-    )
-    
-    await callback.message.edit_text(
-        text=stats_text,
-        reply_markup=keyboard,
-        parse_mode=ParseMode.HTML
-    )
-    await callback.answer()
+    await send_or_edit_text(callback, 'stats', create_back_keyboard())
 
+@dp.callback_query(F.data == "bio")
+async def bio_handler(callback: CallbackQuery):
+    """Обработчик кнопки 'Наша история'"""
+    await send_or_edit_text(callback, 'bio', create_back_keyboard())
+
+# Обработчик неизвестных callback (для robustness)
+@dp.callback_query()
+async def unknown_callback(callback: CallbackQuery):
+    """Обработчик неизвестных callback"""
+    await callback.answer("❓ Неизвестная кнопка. Вернитесь в главное меню с помощью /start.", show_alert=True)
+
+# ========== ЗАПУСК ========== #
 async def main():
+    if not BOT_TOKEN:
+        logger.error("❌ BOT_TOKEN не установлен!")
+        return
     logger.info("🚀 Бот ZOMBE Team запущен с командами и кнопками!")
-    logger.info("📝 Доступные команды: /start, /help, /team, /ti, /content, /stats, /streams")
-    await dp.start_polling(bot)
+    logger.info("📝 Доступные команды: /start, /help, /team, /ti, /content, /stats, /streams, /bio")
+    try:
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"❌ Ошибка при запуске: {e}")
+    finally:
+        await bot.session.close()
 
 if __name__ == "__main__":
     asyncio.run(main())
