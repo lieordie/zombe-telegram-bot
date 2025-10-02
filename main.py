@@ -1,7 +1,6 @@
 import os
 import asyncio
 import logging
-import sys
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from aiogram.filters import CommandStart, Command
@@ -14,32 +13,19 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Получение токена из переменных окружения
-BOT_TOKEN = os.getenv('BOT_TOKEN')
+# Получение токена (для Timeweb лучше использовать переменные окружения)
+BOT_TOKEN = os.getenv('BOT_TOKEN', '8196826964:AAEvCpkPFrwwoFoeNrvjOdND25s7lVJJ1Js')
 
 if not BOT_TOKEN:
-    logger.error("❌ BOT_TOKEN не найден в переменных окружения!")
-    logger.error("💡 На Render.com добавьте переменную BOT_TOKEN в Environment Variables")
-    sys.exit(1)
-
-# Проверяем формат токена
-if not BOT_TOKEN.startswith('') or ':' not in BOT_TOKEN:
-    logger.error("❌ Неверный формат BOT_TOKEN!")
-    sys.exit(1)
-
-logger.info("✅ BOT_TOKEN успешно загружен")
+    logger.error("❌ BOT_TOKEN не найден!")
+    exit(1)
 
 CHANNEL_USERNAME = "@ZOBME_team"
-CHANNEL_INVITE_LINK = "https://t.me/ZOBME_team"
+CHANNEL_INVITE_LINK = "https://t.me/ZOMBE_Team"
 
 # Инициализация бота
-try:
-    bot = Bot(token=BOT_TOKEN)
-    dp = Dispatcher()
-    logger.info("✅ Бот инициализирован успешно")
-except Exception as e:
-    logger.error(f"❌ Ошибка инициализации бота: {e}")
-    sys.exit(1)
+bot = Bot(token=BOT_TOKEN)
+dp = Dispatcher()
 
 # Основная клавиатура с командами
 main_keyboard = InlineKeyboardMarkup(
@@ -69,9 +55,10 @@ async def send_welcome_message(chat_id: int, user_name: str):
     welcome_text = f"""
 🎮 <b>ПРИВЕТ, {user_name}! ДОБРО ПОЖАЛОВАТЬ В ZOBME TEAM! 🔥</b>
 
-Мы - легендарная команда, которая 8 лет подряд не проходит на TI!
+Мы - легендарная команда, которая 8 лет подряд не проходит на TI, 
+но от этого стала только сильнее духом! 💪
 
-Используй кнопки ниже чтобы узнать о нас больше! 🎯
+<b>Используй кнопки ниже чтобы узнать о нас больше!</b>
     """
     
     await bot.send_message(
@@ -112,7 +99,7 @@ async def team_command(message: Message):
     team_text = """
 🎮 <b>ZOBME TEAM - СОСТАВ ЛЕГЕНД</b>
 
-• 🔥 <b>Миша Хохлорез</b> - 1 позиция
+• 🔥 <b>Миша Хохлорез</b> - 2 позиция
 • 🎯 <b>Стiс</b> - 4 позиция  
 • 💎 <b>DOMINIC</b> - 5 позиция
 • 🌟 <b>Величайший Максос</b> - 3 позиция
@@ -165,8 +152,8 @@ async def content_handler(callback: CallbackQuery):
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="🎥 YouTube", url="https://youtube.com"),
-                InlineKeyboardButton(text="🔴 Twitch", url="https://twitch.tv")
+                InlineKeyboardButton(text="🎥 YouTube", url="https://youtube.com/@ZOBME"),
+                InlineKeyboardButton(text="🔴 Twitch", url="https://twitch.tv/ZOBME")
             ],
             [InlineKeyboardButton(text="🔙 Главное меню", callback_data="main_menu")]
         ]
@@ -184,16 +171,15 @@ async def stats_handler(callback: CallbackQuery):
     await callback.answer()
 
 async def main():
-    logger.info("🚀 Запуск ZOBME Bot...")
+    logger.info("🚀 ZOBME Bot запущен на Timeweb!")
     try:
-        # Проверяем что бот доступен
+        # Проверяем подключение
         bot_info = await bot.get_me()
         logger.info(f"✅ Бот @{bot_info.username} готов к работе!")
         
-        # Запускаем поллинг
         await dp.start_polling(bot)
     except Exception as e:
-        logger.error(f"❌ Критическая ошибка: {e}")
+        logger.error(f"❌ Ошибка: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
